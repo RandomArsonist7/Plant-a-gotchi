@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "664087567720",
+    "project_id": "plant-a-gotchi",
+    "storage_bucket": "plant-a-gotchi.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:664087567720:android:fb470660dd1c10e3b14add",
+        "android_client_info": {
+          "package_name": "com.example.plant_a_gotchi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAznL451MzF4JduyxlH4OctK9ns3ZtTZc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
