@@ -57,8 +57,8 @@ import com.google.firebase.database.FirebaseDatabase
 fun SelectionPage(modifier: Modifier = Modifier, navController: NavController, authViewModel: AuthViewModel) {
     // Lista dostępnych roślin
     val plants = listOf(
-        UserPlant("sunflower", "Sunny", R.drawable.sunflowericon, R.drawable.foot, Thresholds(30,70,30,70,30,70), CurrentLevels(), 1, 1),
-        UserPlant("cactus", "Spiky", R.drawable.logo, R.drawable.foot, Thresholds(0,0,0,0,0,0, ), CurrentLevels(), 1, 1),
+        UserPlant("sunflower", "Sunny", R.drawable.sunflowericon, R.drawable.foot, Thresholds(30,70,30,70,30,70), CurrentLevels(50,50,50), 1, 1),
+        UserPlant("cactus", "Spiky", R.drawable.logo, R.drawable.foot, Thresholds(20,30,0,0,0,0, ), CurrentLevels(), 1, 1),
         UserPlant("aloe", "Vera", R.drawable.logo, R.drawable.foot, Thresholds(0,0,0,0,0,0,), CurrentLevels(), 1, 1),
         UserPlant("monstera", "Missy", R.drawable.logo, R.drawable.foot, Thresholds(0,0,0,0,0,0,), CurrentLevels(), 1, 1),
         UserPlant("rose", "Regina", R.drawable.logo, R.drawable.foot, Thresholds(0,0,0,0,0,0,), CurrentLevels(), 1, 1),
@@ -115,6 +115,8 @@ fun SelectionPage(modifier: Modifier = Modifier, navController: NavController, a
                     image = selectedPlant!!.image,
                     animation = selectedPlant!!.animation,
                     thresholds = selectedPlant!!.thresholds,
+                    currentLevels = selectedPlant!!.currentLevels,
+                    plantLevel = selectedPlant!!.plantLevel
                 )
                 val database = FirebaseDatabase.getInstance("https://plant-a-gotchi-default-rtdb.europe-west1.firebasedatabase.app/")
                 val plantRef = database.reference.child("users").child(userId).child("plant")

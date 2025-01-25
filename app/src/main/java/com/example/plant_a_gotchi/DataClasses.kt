@@ -13,7 +13,7 @@ data class UserPlant (
     var animation: Int = 0,
     var thresholds: Thresholds = Thresholds(),
     var currentLevels: CurrentLevels = CurrentLevels(),
-    var plantHappiness: Int = 0,
+    var plantHappiness: Int = 50,
     var plantLevel: Int = 1,
     val lastUpdate: Long = 0
 )

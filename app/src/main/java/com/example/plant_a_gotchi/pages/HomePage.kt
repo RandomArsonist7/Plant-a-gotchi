@@ -11,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -141,7 +145,24 @@ fun FirebaseUI(context: Context, databaseReference: DatabaseReference, authViewM
     val isDataChanged = remember { mutableStateOf(false) }
     val initialLevels = remember { CurrentLevels() } // Inicjalizacja zmiennej przechowującej początkowe wartości
     val plantImageResId = authViewModel.getPlantImageResource(context, plantData.value.plantType, plantData.value.plantLevel)
+    val isDead = plantData.value.plantLevel == 0
 
+    // Flaga do śledzenia dialogu
+    val showDialog = remember { mutableStateOf(false) }
+
+    // Wywołanie dialogu, gdy roślina jest martwa i dialog jeszcze nie był pokazany
+    LaunchedEffect(isDead) {
+        if (isDead && !showDialog.value) {
+            showDialog.value = true
+        }
+    }
+
+    // Wyświetlenie dialogu, jeśli flaga jest ustawiona
+    if (showDialog.value) {
+        DeadPlantDialog(
+            onDismiss = { showDialog.value = false } // Zamknij dialog, gdy użytkownik kliknie "Got it" lub X
+        )
+    }
     LaunchedEffect(userId) {
         if (userId != null) {
             val userPlantRef = database.getReference("users/$userId/plant")
@@ -237,7 +258,15 @@ fun FirebaseUI(context: Context, databaseReference: DatabaseReference, authViewM
                     .background(Color.Transparent),
                 contentAlignment = Alignment.Center
             ) {
-                if (plantImageResId != 0) {
+                if (isDead) {
+                    // Wyświetl obrazek dla martwej rośliny
+                    Image(
+                        painter = painterResource(id = plantImageResId), // Upewnij się, że ten obrazek istnieje w drawable
+                        contentDescription = "Dead plant image",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.matchParentSize().background(Color.Transparent)
+                    )
+                } else if (plantImageResId != 0) {
                     Image(
                         painter = painterResource(id = plantImageResId),
                         contentDescription = null,
@@ -266,7 +295,8 @@ fun FirebaseUI(context: Context, databaseReference: DatabaseReference, authViewM
                 value = plantData.value.currentLevels.water,
                 min = plantData.value.thresholds.waterMin,
                 max = plantData.value.thresholds.waterMax,
-                onClick = { navController.navigate("water") }
+                onClick = { if (!isDead) navController.navigate("water")},
+                isDisabled = isDead
             )
             NeedsProgressBar(
                 label = "Sun",
@@ -274,7 +304,8 @@ fun FirebaseUI(context: Context, databaseReference: DatabaseReference, authViewM
                 value = plantData.value.currentLevels.sun,
                 min = plantData.value.thresholds.sunMin,
                 max = plantData.value.thresholds.sunMax,
-                onClick = { navController.navigate("sun") }
+                onClick =  { if (!isDead) navController.navigate("sun") },
+                isDisabled = isDead
             )
             NeedsProgressBar(
                 label = "Fertilizer",
@@ -282,24 +313,31 @@ fun FirebaseUI(context: Context, databaseReference: DatabaseReference, authViewM
                 value = plantData.value.currentLevels.fertilizer,
                 min = plantData.value.thresholds.fertilizerMin,
                 max = plantData.value.thresholds.fertilizerMax,
-                onClick = { navController.navigate("fertilizer") }
+                onClick = { if (!isDead) navController.navigate("fertilizer") },
+                isDisabled = isDead
             )
 
             Spacer(modifier = Modifier.height(30.dp))
 
             // XP bar
             Text(
-                text = "LVL ${plantData.value.plantLevel}",
+                text = if (isDead) "DEAD" else "LVL ${plantData.value.plantLevel}",
                 fontFamily = FontFamily(Font(R.font.chewy)),
                 style = MaterialTheme.typography.displaySmall
             )
+            if (isDead) {
+                // Wyświetl przycisk "Play Again", gdy roślina jest martwa
+                StyledSection {
+                    Text(text = "Play Again?",fontFamily = FontFamily(Font(R.font.pacifico)), color = Color(0xFF8b5e3c), modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).clickable(onClick = {navController.navigate("select")}))
+                }
+            } else {
             ProgressBarWithLabel(label = "Level", value = plantData.value.plantHappiness / 100f)
             Text(
                 text = "${plantData.value.plantHappiness} / 100 HP",
                 fontFamily = FontFamily(Font(R.font.chewy)),
                 style = MaterialTheme.typography.displaySmall,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
+            )}
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -363,8 +401,11 @@ fun NeedsProgressBar(
     value: Int, // Wartość postępu (od 0 do 100)
     min: Int,   // Minimalna wartość dla zakresu żółtego
     max: Int,   // Maksymalna wartość dla zakresu żółtego
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isDisabled: Boolean = false
 ) {
+
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -372,8 +413,8 @@ fun NeedsProgressBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         CustomRoundedButtonWithDoubleBorder(
-            icon = icon,
-            onClick = onClick,
+            icon = if (isDisabled) painterResource(R.drawable.skull) else icon,
+            onClick = { if (!isDisabled) onClick() else Toast.makeText(context, "Yeah, you think that's gonna help?", Toast.LENGTH_SHORT).show() },
         )
         Spacer(modifier = Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -384,7 +425,7 @@ fun NeedsProgressBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(24.dp)
-                    .background(Color(0xFFf1efe7))
+                    .background(if (isDisabled) Color.LightGray else Color(0xFFf1efe7))
                     .border(BorderStroke(3.5.dp, Color(0xFFa67c52)))
             ) {
                 // Kolor wskaźnika
@@ -393,13 +434,14 @@ fun NeedsProgressBar(
                     value in (min + 1)..max -> Color(0xFFf5d49a)
                     else -> Color(0xFFa9d89e)
                 }
+                if (!isDisabled) {
                 // Wypełniony wskaźnik
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
                         .fillMaxWidth((value / 100f))
                         .background(progressColor)
-                )
+                )}
                 // Markery min i max
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val totalWidth = size.width
@@ -423,6 +465,65 @@ fun NeedsProgressBar(
             }
         }
     }
+}
 
+@Composable
+fun StyledSection() {
+    Box(
+        modifier = Modifier
+            .padding(vertical = 8.dp)
+            .background(Color(0xFFa67c52), RoundedCornerShape(12.dp)) // Ciemna wewnętrzna ramka
+            .padding(4.dp)
+            .background(Color(0xFF8b5e3c), RoundedCornerShape(11.dp)) // Jasna zewnętrzna ramka
+            .padding(4.dp)
+            .background(Color(0xFFf1efe7), RoundedCornerShape(10.dp)) // Jasnobeżowe tło
+            .clip(RoundedCornerShape(16.dp))
+    )
+}
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DeadPlantDialog(
+    onDismiss: () -> Unit // Callback dla zamykania dialogu
+) {
+    AlertDialog(
+        onDismissRequest = { onDismiss() }, // Zamknij dialog przy kliknięciu poza dialogiem
+        containerColor = Color(0xFFf1efe7), // Jasnobeżowe tło dialogu
+        tonalElevation = 4.dp, // Subtelny cień
+        shape = RoundedCornerShape(16.dp), // Zaokrąglone rogi
+        title = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Oh no!",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color(0xFFa67c52), // Główny kolor tekstu w stylu UI
+                    fontFamily = FontFamily(Font(R.font.pacifico)) // Spójna czcionka
+                )
+                Icon(
+                    painter = painterResource(id = R.drawable.skull), // Ikona zamknięcia
+                    contentDescription = "Close dialog",
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable { onDismiss() },
+                    tint = Color(0xFFa67c52) // Dopasowany kolor ikony
+                )
+            }
+        },
+        text = {
+            Text(
+                text = "You have just killed your plant. Don't worry! You can go neglect another poor plant by clicking the Play Again button.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF8b5e3c), // Kolor tekstu w dialogu
+                fontFamily = FontFamily(Font(R.font.chewy)), // Pasująca czcionka
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        },
+        confirmButton = {}
+    )
 }

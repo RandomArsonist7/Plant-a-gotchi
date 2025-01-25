@@ -194,52 +194,72 @@ class AuthViewModel : ViewModel() {
                 val plantLevel = userPlant.plantLevel
                 var updatedLevel = plantLevel
 
-                // Flaga, która zapisuje, czy potrzeby były już ustawione na 100
-                var wasLevel100Before = initialLevels.water == 100 && initialLevels.sun == 100 && initialLevels.fertilizer == 100
-                Log.d("Firebase", "Was level 100 before: $wasLevel100Before")
+                if (plantLevel == 0) {
+                    Log.d("Firebase", "Plant is dead. HappinessPoints cannot be increased.")
+                    updatedHappinessPoints = 0 // Możesz wymusić pozostawienie 0, jeśli to ma sens
+                } else {
 
-                // Sprawdzamy, czy wszystkie poziomy są równe 100 po raz pierwszy
-                if (waterLevel == 100 && sunLevel == 100 && fertilizerLevel == 100 && !wasLevel100Before) {
-                    updatedHappinessPoints += 1  // Zwiększ punkty zadowolenia o 1
-                    Log.d("Firebase", "All levels are 100 for the first time, increasing happiness points to $updatedHappinessPoints")
+                    // Flaga, która zapisuje, czy potrzeby były już ustawione na 100
+                    var wasLevel100Before =
+                        initialLevels.water == 100 && initialLevels.sun == 100 && initialLevels.fertilizer == 100
+                    Log.d("Firebase", "Was level 100 before: $wasLevel100Before")
 
-                    // Zaktualizuj flagę, żeby nie dodawać więcej punktów zadowolenia
-                    initialLevels.water = waterLevel
-                    initialLevels.sun = sunLevel
-                    initialLevels.fertilizer = fertilizerLevel
-                    wasLevel100Before = true
-                }
+                    // Sprawdzamy, czy wszystkie poziomy są równe 100 po raz pierwszy
+                    if (waterLevel == 100 && sunLevel == 100 && fertilizerLevel == 100 && !wasLevel100Before) {
+                        updatedHappinessPoints += 1  // Zwiększ punkty zadowolenia o 1
+                        Log.d(
+                            "Firebase",
+                            "All levels are 100 for the first time, increasing happiness points to $updatedHappinessPoints"
+                        )
 
-                var wasLevel0Before = initialLevels.water == 0 && initialLevels.sun == 0 && initialLevels.fertilizer == 0
-                Log.d("Firebase", "Was level 0 before: $wasLevel0Before")
+                        // Zaktualizuj flagę, żeby nie dodawać więcej punktów zadowolenia
+                        initialLevels.water = waterLevel
+                        initialLevels.sun = sunLevel
+                        initialLevels.fertilizer = fertilizerLevel
+                        wasLevel100Before = true
+                    }
 
-                // Odejmij 1 punkt, jeśli którakolwiek potrzeba wynosi 0
-                if (waterLevel == 0 && sunLevel == 0 && fertilizerLevel == 0 && !wasLevel0Before ) {
-                    updatedHappinessPoints -= 1  // Zwiększ punkty zadowolenia o 1
-                    Log.d("Firebase", "All levels are 100 for the first time, increasing happiness points to $updatedHappinessPoints")
+                    var wasLevel0Before =
+                        initialLevels.water == 0 && initialLevels.sun == 0 && initialLevels.fertilizer == 0
+                    Log.d("Firebase", "Was level 0 before: $wasLevel0Before")
 
-                    // Zaktualizuj flagę, żeby nie dodawać więcej punktów zadowolenia
-                    initialLevels.water = waterLevel
-                    initialLevels.sun = sunLevel
-                    initialLevels.fertilizer = fertilizerLevel
-                    wasLevel100Before = true
+                    // Odejmij 1 punkt, jeśli którakolwiek potrzeba wynosi 0
+                    if (waterLevel == 0 && sunLevel == 0 && fertilizerLevel == 0 && !wasLevel0Before) {
+                        updatedHappinessPoints -= 1  // Zwiększ punkty zadowolenia o 1
+                        Log.d(
+                            "Firebase",
+                            "All levels are 100 for the first time, increasing happiness points to $updatedHappinessPoints"
+                        )
+
+                        // Zaktualizuj flagę, żeby nie dodawać więcej punktów zadowolenia
+                        initialLevels.water = waterLevel
+                        initialLevels.sun = sunLevel
+                        initialLevels.fertilizer = fertilizerLevel
+                        wasLevel100Before = true
 
 
+                    } else if (waterLevel == 0 && sunLevel == 0 && fertilizerLevel == 0 && wasLevel0Before) {
+                        val lastUpdate = snapshot.child("lastUpdate").getValue(Long::class.java)
+                            ?: System.currentTimeMillis()
 
-                } else if (waterLevel == 0 && sunLevel == 0 && fertilizerLevel == 0 && wasLevel0Before ){
-                val lastUpdate = snapshot.child("lastUpdate").getValue(Long::class.java) ?: System.currentTimeMillis()
+                        val currentTime = System.currentTimeMillis()
+                        val elapsedTime = (currentTime - lastUpdate) / (1000 * 60) // Liczba godzin
 
-                val currentTime = System.currentTimeMillis()
-                val elapsedTime = (currentTime - lastUpdate) / (1000 * 60) // Liczba godzin
+                        if (elapsedTime > 0) {
+                            val happinessDecayRate = 1
+                            // Zmniejsz poziomy potrzeb
 
-                if (elapsedTime > 0) {
-                    val happinessDecayRate = 1
-                    // Zmniejsz poziomy potrzeb
-
-                    updatedHappinessPoints = (updatedHappinessPoints - (elapsedTime * happinessDecayRate)).coerceAtLeast(0).toInt()
-                    Log.d("Firebase", "All levels are 0 for the first time, decreasing happiness points to $updatedHappinessPoints")
-                    wasLevel0Before = false
-                }
+                            updatedHappinessPoints =
+                                (updatedHappinessPoints - (elapsedTime * happinessDecayRate)).coerceAtLeast(
+                                    0
+                                ).toInt()
+                            Log.d(
+                                "Firebase",
+                                "All levels are 0 for the first time, decreasing happiness points to $updatedHappinessPoints"
+                            )
+                            wasLevel0Before = false
+                        }
+                    }
                 }
 
                 if (updatedHappinessPoints >= 100) {
@@ -257,8 +277,9 @@ class AuthViewModel : ViewModel() {
                         updatedHappinessPoints = 99
                         Log.d("Firebase", "Level decreased to $updatedLevel")
                     } else {
-                        updatedLevel = 1
+                        updatedLevel = 0
                         updatedHappinessPoints = 0
+                        Log.d("Firebase", "Congrats, you've just killed a plant")
                     }
                 }
 
